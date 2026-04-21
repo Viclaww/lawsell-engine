@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { payments, orders, wallets } from '../database/schema';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { InitializePaymentDto } from './dto/initialize-payment.dto';
 
 @Injectable()
@@ -26,7 +26,7 @@ export class PaymentsService {
       throw new BadRequestException('Cannot initialize payment for this order');
     }
 
-    const reference = `LSE-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const reference = `LSE-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     const amountKobo = Math.round(parseFloat(order.totalAmount) * 100);
 
     const response = await fetch(`${this.paystackBaseUrl}/transaction/initialize`, {
@@ -105,12 +105,12 @@ export class PaymentsService {
           .where(eq(wallets.vendorId, order.vendorId));
 
         if (wallet) {
-          const newBalance = (
-            parseFloat(wallet.balance) + parseFloat(payment.amount)
-          ).toFixed(2);
           await this.db.db
             .update(wallets)
-            .set({ balance: newBalance, updatedAt: new Date() })
+            .set({
+              balance: sql`${wallets.balance} + ${payment.amount}`,
+              updatedAt: new Date(),
+            })
             .where(eq(wallets.vendorId, order.vendorId));
         }
       }

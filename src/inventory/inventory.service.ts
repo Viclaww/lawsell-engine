@@ -84,6 +84,17 @@ export class InventoryService {
       .where(eq(inventory.variantId, variantId));
     if (!inv) throw new NotFoundException('Inventory not found');
 
+    if (inv.stock < quantity) {
+      throw new BadRequestException(
+        `Insufficient stock to fulfill. Available: ${inv.stock}`,
+      );
+    }
+    if (inv.reservedStock < quantity) {
+      throw new BadRequestException(
+        `Cannot fulfill more than reserved quantity. Reserved: ${inv.reservedStock}`,
+      );
+    }
+
     const [updated] = await this.db.db
       .update(inventory)
       .set({
